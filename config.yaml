@@ -1,0 +1,31 @@
+paths:
+  data: "./combined_data"
+  output: "./output"
+  models: "./AutogluonModels"
+  results_base: "./results"
+
+model:
+  prediction_length: 24
+  cutoff_prediction_length: 25
+  time_limit: 80000
+  eval_metric: "MASE"
+  presets: "best_quality"
+  model_name: "autogluon-m24-monthly"
+  # selected_model: "SeasonalNaive"
+
+data:
+  # data_file_name: "combined_data_small.csv"
+  # data_file_name: "cpi_20200.csv"
+  data_file_name: "combined_data.csv"
+  holiday_file_name: "holiday_dates.csv"
+  # data_file_name: "combined_data_old.csv"
+
+
+files:
+  prediction_result: "prediction_result.csv"
+
+logging:
+  log_dir: "./logs"
+  log_level: "INFO"
+
+
