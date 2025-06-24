@@ -88,7 +88,7 @@ def heatmap_colors_style(series, cmap_name='coolwarm_r'): # Blue (low/best) to R
     colors = [f'background-color: {mcolors.to_hex(cmap(norm(v)))}' if pd.notna(v) else '' for v in series]
     return colors
 
-def apply_comprehensive_styling(df_to_style: pd.DataFrame, numeric_df: pd.DataFrame, metric_cols: list, odd_item_color: str = '#444444'): # Changed to dark gray
+def apply_comprehensive_styling(df_to_style: pd.DataFrame, numeric_df: pd.DataFrame, metric_cols: list, odd_item_color: str = '#444444'):
     """
     Applies heatmap coloring for metrics, alternating row colors for items, and item separation borders.
     This function returns a DataFrame of CSS style strings.
@@ -98,8 +98,9 @@ def apply_comprehensive_styling(df_to_style: pd.DataFrame, numeric_df: pd.DataFr
         numeric_df (pd.DataFrame): The original numeric DataFrame used for heatmap calculations.
         metric_cols (list): List of metric column names (e.g., ['RMSE', 'MAE', 'MAPE']).
         odd_item_color (str): Hex color for alternating odd items.
+                                If a dark color, text color will be set to white.
     """
-    df = df_to_style # Now df is directly the DataFrame from .apply(axis=None)
+    df = df_to_style
 
     styles_df_final = pd.DataFrame('', index=df.index, columns=df.columns)
 
@@ -110,8 +111,14 @@ def apply_comprehensive_styling(df_to_style: pd.DataFrame, numeric_df: pd.DataFr
         # Alternating row background
         # Even index (0, 2, ...) gets color, odd doesn't (appears as transparent/browser default)
         bg_color = odd_item_color if i % 2 == 0 else ''
+        
+        # If a background color is applied (i.e., for odd items), set text color to white for better contrast
+        # This helps readability regardless of Streamlit's light/dark mode.
+        text_color_for_odd_rows = 'color: #FFFFFF;' if bg_color else '' 
+        
         for col in df.columns:
-            styles_df_final.loc[item_group_indices, col] += f"background-color: {bg_color};"
+            # Append background and text color styles
+            styles_df_final.loc[item_group_indices, col] += f"background-color: {bg_color};{text_color_for_odd_rows};"
 
         # Heatmap colors for metrics within this group
         for metric_col in metric_cols:
@@ -120,8 +127,19 @@ def apply_comprehensive_styling(df_to_style: pd.DataFrame, numeric_df: pd.DataFr
                 for j, row_idx in enumerate(item_group_indices):
                     current_style_entry = styles_df_final.loc[row_idx, metric_col]
                     # Remove any previous background-color before appending new one from heatmap
-                    current_style_entry = ';'.join([s for s in current_style_entry.split(';') if 'background-color' not in s])
-                    styles_df_final.loc[row_idx, metric_col] = f"{current_style_entry}{colors_for_metric[j]};"
+                    # Ensure original text color from alternating row is preserved if needed,
+                    # or explicitly override with black if heatmap is applied to light background
+                    current_style_entry_parts = [s for s in current_style_entry.split(';') if 'background-color' not in s and 'color' not in s]
+                    
+                    # Decide text color for heatmap cells:
+                    # If the heatmap color is dark, text should be light. If light, text should be dark.
+                    # This is complex without knowing the specific heatmap color.
+                    # For simplicity, we assume Streamlit's default text color is usually good on heatmap,
+                    # unless the odd/even row background explicitly set it to white.
+                    # We will ensure the white text set for odd rows persists here.
+                    final_text_color_for_heatmap = text_color_for_odd_rows # Keep the white text if it's an odd row
+
+                    styles_df_final.loc[row_idx, metric_col] = f"{';'.join(current_style_entry_parts)}{colors_for_metric[j]};{final_text_color_for_heatmap}"
 
     # Apply item separation borders (top border for new items)
     new_item_mask = (df['Display Name'] != df['Display Name'].shift(1)).fillna(False)
