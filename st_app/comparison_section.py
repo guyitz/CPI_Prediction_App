@@ -37,6 +37,8 @@ def heatmap_colors_diff(series, cmap_name='seismic'): # Blue (positive, B better
 def apply_comparison_styling(styled_df_data: pd.DataFrame, numeric_df_for_heatmap: pd.DataFrame, odd_item_color: str = '#2C3E50') -> pd.DataFrame: # Darker Gray/Blue
     """
     Applies alternating row colors for items and heatmap for percentage differences.
+    If a dark `odd_item_color` is used, the text color for those rows will be set to white
+    to ensure readability in both light and dark Streamlit themes.
     """
     df = styled_df_data # The DataFrame to style (which includes string formatting and icons)
     styles_df_final = pd.DataFrame('', index=df.index, columns=df.columns)
@@ -48,10 +50,18 @@ def apply_comparison_styling(styled_df_data: pd.DataFrame, numeric_df_for_heatma
         item_group_indices = df[df['Item Display Name'] == item_display_name].index
         
         # Even index (0, 2, ...) gets color, odd doesn't (appears as transparent/browser default)
-        # Using dark gray for odd items, leaving even items with default Streamlit background
         bg_color = odd_item_color if i % 2 == 0 else '' 
+
+        # If a dark background color is applied (for odd items), set text color to white for better contrast.
+        # This ensures readability regardless of Streamlit's light/dark mode.
+        # Check if the background color is explicitly set and is dark.
+        # A simple heuristic: if the first char is '#' and it's not empty, assume it's a dark color.
+        is_dark_bg = bool(bg_color)
+        text_color_for_odd_rows = 'color: #FFFFFF;' if is_dark_bg else ''
+        
         for col in df.columns:
-            styles_df_final.loc[item_group_indices, col] += f"background-color: {bg_color};"
+            # Append background and text color styles
+            styles_df_final.loc[item_group_indices, col] += f"background-color: {bg_color};{text_color_for_odd_rows};"
 
     # Apply heatmap for percentage difference columns
     diff_cols = [col for col in df.columns if 'Diff %' in col]
@@ -62,11 +72,16 @@ def apply_comparison_styling(styled_df_data: pd.DataFrame, numeric_df_for_heatma
             colors_for_diff = heatmap_colors_diff(numeric_diff_series, cmap_name='seismic') # Blue (positive) to Red (negative)
             for row_idx, style in zip(numeric_diff_series.index, colors_for_diff):
                 current_style_entry = styles_df_final.loc[row_idx, diff_col]
-                # Remove previous background-color if any, then append heatmap color
-                current_style_entry = ';'.join([s for s in current_style_entry.split(';') if 'background-color' not in s])
+                # Remove previous background-color and color if any, then append heatmap color
+                current_style_entry_parts = [s for s in current_style_entry.split(';') if 'background-color' not in s and 'color' not in s]
                 
-                # Add font color to black for Diff % columns
-                styles_df_final.loc[row_idx, diff_col] = f"{current_style_entry}{style}; color: black;"
+                # Determine final text color for heatmap cells.
+                # If the row already has a dark background (from alternating rows) with white text, preserve it.
+                # Otherwise, default to black for readability on potentially lighter heatmap colors.
+                row_has_dark_bg = 'background-color: #2C3E50;' in styles_df_final.loc[row_idx, 'model_name'] # Check for dark background in a representative column
+                final_text_color_for_heatmap = 'color: #FFFFFF;' if row_has_dark_bg else 'color: black;' # Preserve white text or set to black
+
+                styles_df_final.loc[row_idx, diff_col] = f"{';'.join(current_style_entry_parts)}{style}; {final_text_color_for_heatmap}"
 
     # Apply item separation borders (top border for new items)
     new_item_mask = (df['Item Display Name'] != df['Item Display Name'].shift(1)).fillna(False)
