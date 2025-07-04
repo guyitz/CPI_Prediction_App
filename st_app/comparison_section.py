@@ -11,8 +11,8 @@ from pathlib import Path
 # This requires prediction_scores.py to be in the same st_app directory
 from prediction_scores import calculate_metrics
 
-def heatmap_colors_diff(series, cmap_name='seismic'): # Blue (positive, B better) to Red (negative, A better)
-    """
+def heatmap_colors_diff(series, cmap_name='RdYlGn'): # Changed: Colormap from 'seismic' to 'RdYlGn'   
+    """"
     Applies a heatmap style to a pandas Series, specifically for percentage differences.
     Uses 'seismic' colormap where blue is good (B better) and red is bad (A better on errors).
     """
@@ -69,7 +69,7 @@ def apply_comparison_styling(styled_df_data: pd.DataFrame, numeric_df_for_heatma
         # Get the numeric data for the heatmap calculation
         numeric_diff_series = numeric_df_for_heatmap[diff_col]
         if not numeric_diff_series.empty and not numeric_diff_series.isnull().all():
-            colors_for_diff = heatmap_colors_diff(numeric_diff_series, cmap_name='seismic') # Blue (positive) to Red (negative)
+            colors_for_diff = heatmap_colors_diff(numeric_diff_series, cmap_name='RdYlGn') # Blue (positive) to Red (negative)
             for row_idx, style in zip(numeric_diff_series.index, colors_for_diff):
                 current_style_entry = styles_df_final.loc[row_idx, diff_col]
                 # Remove previous background-color and color if any, then append heatmap color
